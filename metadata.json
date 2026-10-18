@@ -1,0 +1,6 @@
+{
+  "name": "StudioCloud",
+  "description": "Premium multi-tenant photography SaaS web application for studio management, galleries, team collaboration, and client portals.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

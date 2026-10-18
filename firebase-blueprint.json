@@ -1,0 +1,256 @@
+{
+  "entities": {
+    "Studio": {
+      "title": "Studio",
+      "description": "An independent photography studio tenant in StudioCloud.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "slug": { "type": "string", "pattern": "^[a-z0-9-]+$", "maxLength": 60 },
+        "ownerId": { "type": "string", "maxLength": 128 },
+        "plan": { "type": "string", "enum": ["starter", "pro", "studio_unlimited"] },
+        "storageAllocationBytes": { "type": "number", "description": "10000000000 bytes (10 GB decimal)" },
+        "storageUsedBytes": { "type": "number" },
+        "branding": {
+          "type": "object",
+          "properties": {
+            "accentColor": { "type": "string", "maxLength": 20 },
+            "logoUrl": { "type": "string", "maxLength": 500 },
+            "watermarkText": { "type": "string", "maxLength": 100 },
+            "contactEmail": { "type": "string", "maxLength": 120 },
+            "website": { "type": "string", "maxLength": 200 },
+            "phone": { "type": "string", "maxLength": 50 }
+          }
+        },
+        "status": { "type": "string", "enum": ["active", "suspended"] },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["name", "slug", "ownerId", "plan", "storageAllocationBytes", "storageUsedBytes", "status", "createdAt", "updatedAt"]
+    },
+    "StudioMember": {
+      "title": "StudioMember",
+      "description": "A staff member or photographer associated with a specific studio.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "studioId": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 120 },
+        "displayName": { "type": "string", "maxLength": 100 },
+        "role": { "type": "string", "enum": ["owner", "lead_photographer", "associate_photographer", "retoucher", "assistant"] },
+        "status": { "type": "string", "enum": ["active", "invited"] },
+        "joinedAt": { "type": "string" }
+      },
+      "required": ["studioId", "userId", "email", "role", "status", "joinedAt"]
+    },
+    "Client": {
+      "title": "Client",
+      "description": "A photography client belonging to a tenant studio.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "studioId": { "type": "string", "maxLength": 128 },
+        "fullName": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "email": { "type": "string", "maxLength": 120 },
+        "phone": { "type": "string", "maxLength": 40 },
+        "shootType": { "type": "string", "enum": ["wedding", "portrait", "commercial", "editorial", "event", "other"] },
+        "status": { "type": "string", "enum": ["lead", "active", "completed", "inactive"] },
+        "notes": { "type": "string", "maxLength": 1000 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["studioId", "fullName", "email", "shootType", "status", "createdAt", "updatedAt"]
+    },
+    "Gallery": {
+      "title": "Gallery",
+      "description": "A photo gallery collection managed by the studio.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "studioId": { "type": "string", "maxLength": 128 },
+        "clientId": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "minLength": 2, "maxLength": 120 },
+        "description": { "type": "string", "maxLength": 500 },
+        "shootDate": { "type": "string", "maxLength": 30 },
+        "coverImageUrl": { "type": "string", "maxLength": 500 },
+        "status": { "type": "string", "enum": ["draft", "in_review", "published", "archived"] },
+        "privacy": { "type": "string", "enum": ["public", "password_protected", "private"] },
+        "downloadAccess": { "type": "boolean" },
+        "photoCount": { "type": "number" },
+        "storageBytes": { "type": "number" },
+        "expiresAt": { "type": "string", "maxLength": 40 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["studioId", "title", "status", "privacy", "downloadAccess", "photoCount", "storageBytes", "createdAt", "updatedAt"]
+    },
+    "ActivityLog": {
+      "title": "ActivityLog",
+      "description": "Audit trail log record for studio operations.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "studioId": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "userEmail": { "type": "string", "maxLength": 120 },
+        "action": { "type": "string", "maxLength": 80 },
+        "targetType": { "type": "string", "maxLength": 50 },
+        "targetName": { "type": "string", "maxLength": 120 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["studioId", "userId", "action", "targetType", "targetName", "createdAt"]
+    },
+    "UserPublic": {
+      "title": "UserPublic",
+      "description": "User profile with tenancy pointer and system role.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 120 },
+        "displayName": { "type": "string", "maxLength": 100 },
+        "activeStudioId": { "type": "string", "maxLength": 128 },
+        "isSuperAdmin": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["email", "displayName", "createdAt", "updatedAt"]
+    },
+    "SystemAdmin": {
+      "title": "SystemAdmin",
+      "description": "Superadmin record authorized to view platform-wide overview.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 120 },
+        "grantedAt": { "type": "string" }
+      },
+      "required": ["email", "grantedAt"]
+    },
+    "MediaItem": {
+      "title": "MediaItem",
+      "description": "An uploaded photo or video asset in a gallery.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "studioId": { "type": "string", "maxLength": 128 },
+        "galleryId": { "type": "string", "maxLength": 128 },
+        "fileName": { "type": "string", "maxLength": 255 },
+        "fileType": { "type": "string", "enum": ["image", "video"] },
+        "mimeType": { "type": "string", "maxLength": 100 },
+        "sizeBytes": { "type": "number" },
+        "storagePath": { "type": "string", "maxLength": 500 },
+        "downloadUrl": { "type": "string", "maxLength": 1000 },
+        "uploadedBy": { "type": "string", "maxLength": 128 },
+        "uploadedAt": { "type": "string" }
+      },
+      "required": ["studioId", "galleryId", "fileName", "fileType", "mimeType", "sizeBytes", "storagePath", "downloadUrl", "uploadedBy", "uploadedAt"]
+    },
+    "PhotoProofItem": {
+      "title": "PhotoProofItem",
+      "description": "Client proofing selection, favourite, or feedback comment on a gallery media asset.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "studioId": { "type": "string", "maxLength": 128 },
+        "galleryId": { "type": "string", "maxLength": 128 },
+        "mediaId": { "type": "string", "maxLength": 128 },
+        "clientEmail": { "type": "string", "maxLength": 120 },
+        "clientName": { "type": "string", "maxLength": 100 },
+        "isFavourite": { "type": "boolean" },
+        "isApprovedForAlbum": { "type": "boolean" },
+        "comment": { "type": "string", "maxLength": 1000 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["studioId", "galleryId", "mediaId", "clientEmail", "clientName", "createdAt", "updatedAt"]
+    },
+    "SubscriptionPlan": {
+      "title": "SubscriptionPlan",
+      "description": "Global subscription plan definition managed exclusively by Super Admins.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "minLength": 2, "maxLength": 100 },
+        "description": { "type": "string", "maxLength": 500 },
+        "priceMonthly": { "type": "number" },
+        "priceAnnual": { "type": "number" },
+        "currency": { "type": "string", "maxLength": 10 },
+        "storageLimitBytes": { "type": "number" },
+        "galleryLimit": { "type": "number" },
+        "maxTeamMembers": { "type": "number" },
+        "billingInterval": { "type": "string", "enum": ["monthly", "annual", "both"] },
+        "status": { "type": "string", "enum": ["active", "inactive"] },
+        "supportedFeatures": { "type": "array", "items": { "type": "string" } },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["name", "priceMonthly", "priceAnnual", "currency", "storageLimitBytes", "billingInterval", "status", "createdAt", "updatedAt"]
+    },
+    "PlatformAuditRecord": {
+      "title": "PlatformAuditRecord",
+      "description": "Platform-wide immutable audit record for privileged administrative actions.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "actorUid": { "type": "string", "maxLength": 128 },
+        "actorEmail": { "type": "string", "maxLength": 120 },
+        "action": { "type": "string", "maxLength": 80 },
+        "targetType": { "type": "string", "maxLength": 50 },
+        "targetId": { "type": "string", "maxLength": 128 },
+        "targetName": { "type": "string", "maxLength": 120 },
+        "studioId": { "type": "string", "maxLength": 128 },
+        "reason": { "type": "string", "maxLength": 500 },
+        "timestamp": { "type": "string" }
+      },
+      "required": ["actorUid", "actorEmail", "action", "targetType", "targetId", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/plans/{planId}": {
+      "schema": { "$ref": "#/entities/SubscriptionPlan" },
+      "description": "Platform-wide subscription plan definitions."
+    },
+    "/platformAuditLogs/{logId}": {
+      "schema": { "$ref": "#/entities/PlatformAuditRecord" },
+      "description": "Platform administrative audit logs."
+    },
+    "/studios/{studioId}": {
+      "schema": { "$ref": "#/entities/Studio" },
+      "description": "Root photography studio tenant documents."
+    },
+    "/studios/{studioId}/members/{memberId}": {
+      "schema": { "$ref": "#/entities/StudioMember" },
+      "description": "Team members belonging to a studio."
+    },
+    "/studios/{studioId}/clients/{clientId}": {
+      "schema": { "$ref": "#/entities/Client" },
+      "description": "Client CRM entries scoped to the tenant studio."
+    },
+    "/studios/{studioId}/galleries/{galleryId}": {
+      "schema": { "$ref": "#/entities/Gallery" },
+      "description": "Client galleries scoped to the tenant studio."
+    },
+    "/studios/{studioId}/galleries/{galleryId}/media/{mediaId}": {
+      "schema": { "$ref": "#/entities/MediaItem" },
+      "description": "Photos and videos uploaded to a specific gallery."
+    },
+    "/studios/{studioId}/galleries/{galleryId}/proofing/{proofId}": {
+      "schema": { "$ref": "#/entities/PhotoProofItem" },
+      "description": "Client photo favourites, album approval selections, and feedback comments."
+    },
+    "/studios/{studioId}/activityLogs/{logId}": {
+      "schema": { "$ref": "#/entities/ActivityLog" },
+      "description": "Tenant audit log scoped to the studio."
+    },
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserPublic" },
+      "description": "User profile linking authenticated user to active studio tenant."
+    },
+    "/admins/{adminId}": {
+      "schema": { "$ref": "#/entities/SystemAdmin" },
+      "description": "Platform super administrators registry."
+    }
+  }
+}

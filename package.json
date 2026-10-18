@@ -1,0 +1,47 @@
+{
+  "name": "react-example",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "tsx server.ts",
+    "start": "tsx server.ts",
+    "build": "vite build",
+    "preview": "vite preview",
+    "clean": "rm -rf dist server.js",
+    "lint": "tsc --noEmit",
+    "test:rules-boundary": "NODE_ENV=test tsx scripts/test-firestore-rules-boundary.ts",
+    "test:backend-proxy": "tsx scripts/test-backend-proxy.ts",
+    "test:server-identity": "tsx scripts/test-server-identity-fail-closed.ts",
+    "test:storage-authority": "tsx scripts/test-storage-upload-authority.ts",
+    "test:staging-preflight": "tsx scripts/test-staging-preflight.ts",
+    "test:emulator": "tsx scripts/test-firestore-rules-emulator.ts",
+    "test": "tsx scripts/test-security-rules.ts && tsx scripts/test-phase3-storage.ts && tsx scripts/test-storage-upload-authority.ts && tsx scripts/test-phase4-registration.ts && tsx scripts/test-gallery-creation.ts && tsx scripts/test-phase4-client-proofing.ts && tsx scripts/test-phase5-client-crm.ts && tsx scripts/test-production-tasks.ts && tsx scripts/test-settings-and-branding.ts && tsx scripts/test-notifications-and-activity.ts && tsx scripts/test-super-admin-subscriptions.ts && tsx scripts/test-phase8-platform-control.ts && tsx scripts/test-phase9-starter-plan.ts && tsx scripts/test-phase11-audit-trail.ts && tsx scripts/test-phase12-subscription-mapping.ts && tsx scripts/test-phase13-manual-migration.ts && tsx scripts/test-gallery-templates.ts && NODE_ENV=test tsx scripts/test-gallery-access-boundary.ts && NODE_ENV=test tsx scripts/test-phase2-frontend-integration.ts && NODE_ENV=test tsx scripts/test-firestore-rules-boundary.ts && tsx scripts/test-server-identity-fail-closed.ts"
+  },
+  "dependencies": {
+    "@google/genai": "^2.4.0",
+    "@tailwindcss/vite": "^4.3.3",
+    "@vitejs/plugin-react": "^6.1.1",
+    "dotenv": "^17.2.3",
+    "express": "^4.21.2",
+    "firebase": "^13.0.0",
+    "firebase-admin": "^14.5.0",
+    "lucide-react": "^0.546.0",
+    "motion": "^12.23.24",
+    "react": "^19.0.1",
+    "react-dom": "^19.0.1",
+    "vite": "^8.3.0"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^6.0.0",
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.14.0",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "autoprefixer": "^10.4.21",
+    "esbuild": "^0.25.0",
+    "tailwindcss": "^4.3.3",
+    "tsx": "^4.21.0",
+    "typescript": "^7.0.2"
+  }
+}

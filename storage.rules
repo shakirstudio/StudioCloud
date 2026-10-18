@@ -1,0 +1,30 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Default deny catch-all for unmapped storage paths
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+
+    // Tenant studio media files
+    // Uploads are authorized server-side via Trusted Backend Upload Authority (V4 signed URLs)
+    // Media delivery is authorized via secure tokenized URLs distributed by the trusted backend proxy
+    match /studios/{studioId}/galleries/{galleryId}/{fileName} {
+      // Direct SDK reads: Default deny to prevent arbitrary browsing of private tenant media
+      // Emergency Super Admin access only (client views use tokenized URLs)
+      allow read: if request.auth != null && request.auth.token.email == 'shakirtamboli.pune@gmail.com';
+
+      // Direct SDK writes: Denied. All uploads must be authorized via the trusted backend upload authority
+      // Narrow Super Admin emergency upload exception with strict volumetric and MIME checks
+      allow write: if request.auth != null && 
+        request.auth.token.email == 'shakirtamboli.pune@gmail.com' &&
+        (request.resource == null || (
+          request.resource.size > 0 &&
+          request.resource.size <= 262144000 &&
+          (request.resource.contentType.matches('image/.*') || request.resource.contentType.matches('video/.*'))
+        ));
+    }
+  }
+}
+

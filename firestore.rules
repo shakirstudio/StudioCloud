@@ -1,0 +1,245 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    // Super Admin privilege is strictly anchored to trusted email or system registry
+    function isSuperAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == 'shakirtamboli.pune@gmail.com' ||
+        request.auth.token.email == 'tambolishakir66@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isStudioOwner(studioId) {
+      return isSignedIn() && (
+        isSuperAdmin() ||
+        (exists(/databases/$(database)/documents/studios/$(studioId)) &&
+         get(/databases/$(database)/documents/studios/$(studioId)).data.ownerId == request.auth.uid)
+      );
+    }
+
+    function isStudioMember(studioId) {
+      return isSignedIn() && (
+        isSuperAdmin() ||
+        isStudioOwner(studioId) ||
+        exists(/databases/$(database)/documents/studios/$(studioId)/members/$(request.auth.uid))
+      );
+    }
+
+    // Platform Super Admin Registry
+    match /admins/{adminId} {
+      allow read: if isSuperAdmin();
+      allow write: if isSuperAdmin();
+    }
+
+    // Platform Subscription Plans Catalog
+    match /plans/{planId} {
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isSuperAdmin() && isValidId(planId);
+    }
+
+    // Platform Super Admin Audit Logs (strictly immutable)
+    match /platformAuditLogs/{logId} {
+      allow get, list: if isSuperAdmin();
+      allow create: if isSuperAdmin() && isValidId(logId);
+      allow update, delete: if false;
+    }
+
+    // User Profiles with anti-privilege escalation guard
+    match /users/{userId} {
+      allow get: if isSignedIn() && (request.auth.uid == userId || isSuperAdmin());
+      allow list: if isSuperAdmin();
+      
+      // Users cannot self-grant Super Admin permissions
+      allow create: if isSignedIn() && request.auth.uid == userId && isValidId(userId) && (
+        !('isSuperAdmin' in incoming()) || 
+        incoming().isSuperAdmin == false || 
+        isSuperAdmin()
+      );
+      
+      allow update: if isSignedIn() && request.auth.uid == userId && isValidId(userId) && (
+        !('isSuperAdmin' in incoming()) || 
+        incoming().isSuperAdmin == existing().isSuperAdmin || 
+        isSuperAdmin()
+      );
+      
+      allow delete: if isSuperAdmin();
+    }
+
+    // Multi-tenant Photography Studios
+    match /studios/{studioId} {
+      allow get: if isValidId(studioId) && (isSuperAdmin() || isStudioMember(studioId));
+      allow list: if isSuperAdmin() || (isSignedIn() && resource.data.ownerId == request.auth.uid);
+      
+      // New studio registration: enforced default 10 GB decimal (10,000,000,000 bytes) and starter plan
+      allow create: if isSignedIn() && isValidId(studioId) && 
+        incoming().ownerId == request.auth.uid &&
+        incoming().storageAllocationBytes == 10000000000 &&
+        incoming().plan == 'starter' &&
+        incoming().status == 'active';
+
+      // Updates: Studio Owners CANNOT tamper with quota, plan, status, or ownerId
+      allow update: if isValidId(studioId) && (
+        isSuperAdmin() || (
+          isStudioOwner(studioId) &&
+          incoming().ownerId == existing().ownerId &&
+          incoming().storageAllocationBytes == existing().storageAllocationBytes &&
+          incoming().plan == existing().plan &&
+          incoming().status == existing().status
+        )
+      );
+
+      allow delete: if isValidId(studioId) && (isSuperAdmin() || isStudioOwner(studioId));
+
+      // Studio Members subcollection with anti-self-elevation
+      match /members/{memberId} {
+        allow get: if isValidId(memberId) && (isSuperAdmin() || isStudioMember(studioId));
+        allow list: if isSuperAdmin() || isStudioMember(studioId);
+        allow create: if isValidId(memberId) && (isSuperAdmin() || isStudioOwner(studioId));
+        
+        // Members cannot elevate their own role
+        allow update: if isValidId(memberId) && (
+          isSuperAdmin() || (
+            isStudioOwner(studioId) && (
+              request.auth.uid != memberId || 
+              incoming().role == existing().role
+            )
+          )
+        );
+
+        // Owners cannot delete themselves from studio
+        allow delete: if isValidId(memberId) && (
+          isSuperAdmin() || (
+            isStudioOwner(studioId) && 
+            memberId != request.auth.uid
+          )
+        );
+      }
+
+      // Clients CRM subcollection (strictly isolated to studio members)
+      match /clients/{clientId} {
+        allow get: if isValidId(clientId) && (isSuperAdmin() || isStudioMember(studioId));
+        allow list: if isSuperAdmin() || isStudioMember(studioId);
+        allow create, update, delete: if isValidId(clientId) && (isSuperAdmin() || isStudioMember(studioId));
+      }
+
+      // Galleries subcollection
+      match /galleries/{galleryId} {
+        allow get: if isValidId(galleryId) && (
+          isSuperAdmin() ||
+          isStudioMember(studioId) || (
+            resource.data.privacy == 'public' &&
+            resource.data.status == 'published'
+          )
+        );
+        allow list: if isSuperAdmin() || isStudioMember(studioId);
+        allow create, update: if isValidId(galleryId) && (isSuperAdmin() || isStudioMember(studioId));
+        allow delete: if isValidId(galleryId) && (isSuperAdmin() || isStudioOwner(studioId));
+
+        // Media items (photos & videos) subcollection
+        match /media/{mediaId} {
+          allow get: if isValidId(mediaId) && (
+            isSuperAdmin() ||
+            isStudioMember(studioId) || (
+              get(/databases/$(database)/documents/studios/$(studioId)/galleries/$(galleryId)).data.privacy == 'public' &&
+              get(/databases/$(database)/documents/studios/$(studioId)/galleries/$(galleryId)).data.status == 'published'
+            )
+          );
+          allow list: if isSuperAdmin() || isStudioMember(studioId) || (
+            get(/databases/$(database)/documents/studios/$(studioId)/galleries/$(galleryId)).data.privacy == 'public' &&
+            get(/databases/$(database)/documents/studios/$(studioId)/galleries/$(galleryId)).data.status == 'published'
+          );
+          allow create: if isValidId(mediaId) && (isSuperAdmin() || isStudioMember(studioId)) &&
+            incoming().sizeBytes > 0 && incoming().sizeBytes <= 262144000;
+          allow update: if isValidId(mediaId) && (isSuperAdmin() || isStudioMember(studioId));
+          allow delete: if isValidId(mediaId) && (isSuperAdmin() || isStudioMember(studioId));
+        }
+
+        // Client Photo Proofing subcollection (favourites, album selections, feedback comments)
+        match /proofing/{proofId} {
+          allow get: if isValidId(proofId) && (
+            isSuperAdmin() ||
+            isStudioMember(studioId) || (
+              get(/databases/$(database)/documents/studios/$(studioId)/galleries/$(galleryId)).data.privacy == 'public' &&
+              get(/databases/$(database)/documents/studios/$(studioId)/galleries/$(galleryId)).data.status == 'published'
+            )
+          );
+          allow list: if isSuperAdmin() || isStudioMember(studioId) || (
+            get(/databases/$(database)/documents/studios/$(studioId)/galleries/$(galleryId)).data.privacy == 'public' &&
+            get(/databases/$(database)/documents/studios/$(studioId)/galleries/$(galleryId)).data.status == 'published'
+          );
+          allow create, update: if isValidId(proofId) && (
+            isSuperAdmin() ||
+            isStudioMember(studioId) || (
+              get(/databases/$(database)/documents/studios/$(studioId)/galleries/$(galleryId)).data.privacy == 'public' &&
+              get(/databases/$(database)/documents/studios/$(studioId)/galleries/$(galleryId)).data.status == 'published' &&
+              incoming().studioId == studioId &&
+              incoming().galleryId == galleryId
+            )
+          );
+          allow delete: if isValidId(proofId) && (isSuperAdmin() || isStudioMember(studioId));
+        }
+      }
+
+      // Activity Logs subcollection (immutable audit logs)
+      match /activityLogs/{logId} {
+        allow get: if isValidId(logId) && (isSuperAdmin() || isStudioMember(studioId));
+        allow list: if isSuperAdmin() || isStudioMember(studioId);
+        allow create: if isValidId(logId) && (isSuperAdmin() || isStudioMember(studioId));
+        allow update, delete: if false;
+      }
+
+      // Production Tasks subcollection (strictly isolated to studio members)
+      match /tasks/{taskId} {
+        allow get: if isValidId(taskId) && (isSuperAdmin() || isStudioMember(studioId));
+        allow list: if isSuperAdmin() || isStudioMember(studioId);
+        allow create, update: if isValidId(taskId) && (isSuperAdmin() || isStudioMember(studioId)) &&
+          incoming().studioId == studioId;
+        allow delete: if isValidId(taskId) && (isSuperAdmin() || isStudioMember(studioId));
+      }
+
+      // In-App Notifications subcollection (partitioned per studio, readable and updatable by studio members)
+      match /notifications/{notificationId} {
+        allow get: if isValidId(notificationId) && (isSuperAdmin() || isStudioMember(studioId));
+        allow list: if isSuperAdmin() || isStudioMember(studioId);
+        allow create: if isValidId(notificationId) && (isSuperAdmin() || isStudioMember(studioId)) &&
+          incoming().studioId == studioId;
+        allow update: if isValidId(notificationId) && (isSuperAdmin() || isStudioMember(studioId)) &&
+          incoming().studioId == studioId;
+        allow delete: if isValidId(notificationId) && (isSuperAdmin() || isStudioMember(studioId));
+      }
+
+      // Gallery Templates subcollection (strictly isolated to studio members & super admin)
+      match /templates/{templateId} {
+        allow get: if isValidId(templateId) && (isSuperAdmin() || isStudioMember(studioId));
+        allow list: if isSuperAdmin() || isStudioMember(studioId);
+        allow create, update: if isValidId(templateId) && (isSuperAdmin() || isStudioMember(studioId)) &&
+          incoming().studioId == studioId;
+        allow delete: if isValidId(templateId) && (isSuperAdmin() || isStudioMember(studioId));
+      }
+    }
+  }
+}

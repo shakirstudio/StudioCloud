@@ -1,0 +1,8 @@
+{
+  "projectId": "YOUR_STAGING_GCP_PROJECT_ID",
+  "appId": "YOUR_STAGING_FIREBASE_APP_ID",
+  "storageBucket": "YOUR_STAGING_STORAGE_BUCKET.firebasestorage.app",
+  "apiKey": "YOUR_STAGING_FIREBASE_API_KEY",
+  "authDomain": "YOUR_STAGING_GCP_PROJECT_ID.firebaseapp.com",
+  "firestoreDatabaseId": "studiocloud-staging-db"
+}
